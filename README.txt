@@ -2,6 +2,7 @@ DIRECTORY OVERVIEW
 --------------------------------------------------------------------------------
 
 cgl
+
     Conway's game of life
 
 rps
@@ -9,4 +10,5 @@ rps
     Rock-paper-scissor
 
 la
+
     Langton's ant
