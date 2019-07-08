@@ -169,15 +169,12 @@ void init(ant_t *ant, int d, SDL_Texture *texture)
 
 void iterate(ant_t *ant, SDL_Texture *texture)
 {
-    cell_t *curr_cell = &grid(ant->x, ant->y);
-    pixel(ant->x, ant->y) = states[curr_cell->state].hex;
-
+    cell_t *cell = &grid(ant->x, ant->y);
+    rotate(ant, states[cell->state].motion);
+    cell->state = (cell->state + 1) % NUM_STATES;
+    pixel(ant->x, ant->y) = states[cell->state].hex;
     move(ant);
     pixel(ant->x, ant->y) = ANT_COLOR;
-
-    cell_t *next_cell = &grid(ant->x, ant->y);
-    next_cell->state = (next_cell->state + 1) % NUM_STATES;
-    rotate(ant, states[next_cell->state].motion);
 
     SDL_UpdateTexture(texture, NULL, pixels, texture_w * sizeof(pixel_t));
 }
@@ -245,7 +242,7 @@ int main(int argc, char **argv)
 #endif /* RSP_FULLSCREEN */
     SDL_ShowWindow(window);
 
-    init(ant, N, texture);
+    init(ant, W, texture);
 
     printf("STATES\n");
     for (int i = 0; i < NUM_STATES; i++)
