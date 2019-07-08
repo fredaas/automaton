@@ -177,7 +177,6 @@ void iterate(ant_t *ant, SDL_Texture *texture)
 
     cell_t *next_cell = &grid(ant->x, ant->y);
     next_cell->state = (next_cell->state + 1) % NUM_STATES;
-    state_t state = states[next_cell->state];
     rotate(ant, states[next_cell->state].motion);
 
     SDL_UpdateTexture(texture, NULL, pixels, texture_w * sizeof(pixel_t));
