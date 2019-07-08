@@ -39,14 +39,17 @@ pixel_t *pixels = NULL;
 
 ant_t *ant = NULL;
 
+#define SCALE 4
+
 #define WIDTH 800
 #define HEIGHT 600
 
 int window_w  = WIDTH,
     window_h  = HEIGHT;
 
-int texture_w = WIDTH / 4,
-    texture_h = HEIGHT / 4;
+/* Divisors must divide the window dimensions */
+int texture_w = WIDTH / SCALE,
+    texture_h = HEIGHT / SCALE;
 
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
@@ -101,11 +104,11 @@ void move(ant_t *ant)
     }
 }
 
-void init(ant_t *ant, SDL_Texture *texture)
+void init(ant_t *ant, int d, SDL_Texture *texture)
 {
     ant->x = texture_w / 2;
     ant->y = texture_h / 2;
-    ant->d = 0;
+    ant->d = d;
     grid(ant->x, ant->y).state = BLACK;
     pixel(ant->x, ant->y) = colors[RED];
 
@@ -195,7 +198,7 @@ int main(int argc, char **argv)
 #endif /* RSP_FULLSCREEN */
     SDL_ShowWindow(window);
 
-    init(ant, texture);
+    init(ant, N, texture);
 
     SDL_bool done = SDL_FALSE;
     while (!done)
