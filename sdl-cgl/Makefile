@@ -1,4 +1,4 @@
-CFLAGS=-std=c99 -O2
+CFLAGS=-std=c99 -O2 -Wall
 CC=gcc
 
 all: clean main

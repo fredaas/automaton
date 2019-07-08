@@ -6,7 +6,21 @@
 #define FPS 120
 #define SLEEPTIME (1000 / FPS)
 
+#define N 0
+#define E 90
+#define S 180
+#define W 270
+
+#define ANT_COLOR 0xff4040ff
+
+#define SCALE 4
+#define WIDTH 800
+#define HEIGHT 600
+
+typedef uint32_t pixel_t;
+
 typedef struct {
+    /* State value corresponding to 'id' in state_t */
     int state;
 } cell_t;
 
@@ -16,22 +30,17 @@ typedef struct {
     int d;
 } ant_t;
 
-enum { LEFT, RIGHT };
+typedef struct {
+    pixel_t hex;
+    char motion;
+    int id;
+} state_t;
 
-enum { BLACK, WHITE, RED, NUM_STATES };
+int NUM_STATES = 0;
 
-#define N 0
-#define E 90
-#define S 180
-#define W 270
+char *rules = NULL;
 
-typedef uint32_t pixel_t;
-
-pixel_t colors[NUM_STATES] = {
-    [WHITE] = 0xffffffff,
-    [BLACK] = 0x404040ff,
-    [RED]   = 0xff4040ff
-};
+state_t *states = NULL;
 
 cell_t *cell_grid = NULL;
 
@@ -39,15 +48,10 @@ pixel_t *pixels = NULL;
 
 ant_t *ant = NULL;
 
-#define SCALE 4
-
-#define WIDTH 800
-#define HEIGHT 600
-
 int window_w  = WIDTH,
     window_h  = HEIGHT;
 
-/* Divisors must divide the window dimensions */
+/* SCALE must divide window dimensions */
 int texture_w = WIDTH / SCALE,
     texture_h = HEIGHT / SCALE;
 
@@ -58,17 +62,33 @@ SDL_Texture *texture = NULL;
 #define grid(x, y) cell_grid[(texture_w * (y)) + (x)]
 #define pixel(x, y) pixels[(texture_w * (y)) + (x)]
 
+pixel_t rcolor(void)
+{
+    char *hex = "0123456789abcdef";
+    char color[9];
+    memset(color, 'f', 8);
+
+    int i = (rand() % 3) * 2;
+    color[i] = hex[rand() % 16];
+    color[i + 1] = hex[rand() % 16];
+    i =  (rand() % 3) * 2;
+    color[i] = '4';
+    color[i + 1] = '0';
+
+    return (pixel_t)strtol(color, NULL, 16);
+}
+
 /* Rotate within range [0, 360) */
 void rotate(ant_t *ant, int motion)
 {
     switch (motion)
     {
-    case LEFT:
+    case 'L':
         ant->d -= 90;
         if (ant->d < 0)
             ant->d = 360 + ant->d;
         break;
-    case RIGHT:
+    case 'R':
         ant->d += 90;
         if (ant->d >= 360)
             ant->d = 0;
@@ -106,11 +126,43 @@ void move(ant_t *ant)
 
 void init(ant_t *ant, int d, SDL_Texture *texture)
 {
+    NUM_STATES = strlen(rules);
+    states = (state_t *)malloc(NUM_STATES * sizeof(state_t));
+
+    if (NUM_STATES == 2)
+    {
+        state_t color = (state_t){
+            .hex = 0xffffffff,
+            .motion = rules[0],
+            .id = 0
+        };
+        states[0] = color;
+        color = (state_t){
+            .hex = 0x404040ff,
+            .motion = rules[1],
+            .id = 1
+        };
+        states[1] = color;
+    }
+    else
+    {
+        for (int i = 0; i < NUM_STATES; i++)
+        {
+            state_t color = (state_t){
+                .hex = rcolor(),
+                .motion = rules[i],
+                .id = i
+            };
+            states[i] = color;
+        }
+    }
+
     ant->x = texture_w / 2;
     ant->y = texture_h / 2;
     ant->d = d;
-    grid(ant->x, ant->y).state = BLACK;
-    pixel(ant->x, ant->y) = colors[RED];
+
+    grid(ant->x, ant->y).state = 0;
+    pixel(ant->x, ant->y) = ANT_COLOR;
 
     SDL_UpdateTexture(texture, NULL, pixels, texture_w * sizeof(pixel_t));
 }
@@ -118,24 +170,15 @@ void init(ant_t *ant, int d, SDL_Texture *texture)
 void iterate(ant_t *ant, SDL_Texture *texture)
 {
     cell_t *curr_cell = &grid(ant->x, ant->y);
-    pixel(ant->x, ant->y) = colors[curr_cell->state];
+    pixel(ant->x, ant->y) = states[curr_cell->state].hex;
 
     move(ant);
-    pixel(ant->x, ant->y) = colors[RED];
+    pixel(ant->x, ant->y) = ANT_COLOR;
 
     cell_t *next_cell = &grid(ant->x, ant->y);
-
-    switch (next_cell->state)
-    {
-    case WHITE:
-        next_cell->state = BLACK;
-        rotate(ant, RIGHT);
-        break;
-    case BLACK:
-        next_cell->state = WHITE;
-        rotate(ant, LEFT);
-        break;
-    }
+    next_cell->state = (next_cell->state + 1) % NUM_STATES;
+    state_t state = states[next_cell->state];
+    rotate(ant, states[next_cell->state].motion);
 
     SDL_UpdateTexture(texture, NULL, pixels, texture_w * sizeof(pixel_t));
 }
@@ -143,6 +186,11 @@ void iterate(ant_t *ant, SDL_Texture *texture)
 int main(int argc, char **argv)
 {
     srand(time(NULL));
+
+    if (argc - 1 == 0)
+        rules = "RL";
+    else
+        rules = argv[1];
 
     Uint32 flags = SDL_WINDOW_HIDDEN;
 
@@ -169,8 +217,8 @@ int main(int argc, char **argv)
     /* Initialize cell states */
     for (int x = 0; x < texture_w; x++)
         for (int y = 0; y < texture_h; y++)
-            grid(x, y).state = WHITE;
-    memset(pixels, colors[WHITE], texture_w * texture_h * sizeof(pixel_t));
+            grid(x, y).state = 0;
+    memset(pixels, 0xffffffff, texture_w * texture_h * sizeof(pixel_t));
 
     /* Configure texture */
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
@@ -188,7 +236,7 @@ int main(int argc, char **argv)
     SDL_SetRenderTarget(renderer, texture);
 
     /* Configure window */
-    SDL_SetWindowTitle(window, argv[1]);
+    SDL_SetWindowTitle(window, "Langton's Ant");
     SDL_SetWindowSize(window, window_w, window_h);
 #ifdef RPS_FULLSCREEN
     SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
@@ -199,6 +247,15 @@ int main(int argc, char **argv)
     SDL_ShowWindow(window);
 
     init(ant, N, texture);
+
+    printf("STATES\n");
+    for (int i = 0; i < NUM_STATES; i++)
+        printf("%*c %c %d %x\n",
+            4, ' ',
+            states[i].motion,
+            states[i].id,
+            states[i].hex
+        );
 
     SDL_bool done = SDL_FALSE;
     while (!done)
