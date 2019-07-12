@@ -13,6 +13,10 @@ la
 
     Langton's ant
 
+eca
+    
+    Elementary cellular automata
+
 bb
 
     Brian's Brain [NOT IMPLEMENTED]
