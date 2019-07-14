@@ -182,14 +182,14 @@ int main(int argc, char **argv)
     if (SDL_Init(SDL_INIT_VIDEO) == -1)
     {
         fprintf(stderr, "SDL_Init(SDL_INIT_VIDEO) failed: %s\n",
-                SDL_GetError());
+            SDL_GetError());
         return 1;
     }
 
     if (SDL_CreateWindowAndRenderer(0, 0, flags, &window, &renderer) < 0)
     {
         fprintf(stderr, "SDL_CreateWindowAndRenderer() failed: %s\n",
-                SDL_GetError());
+            SDL_GetError());
         return 1;
     }
 
@@ -219,12 +219,11 @@ int main(int argc, char **argv)
     /* Configure window */
     SDL_SetWindowTitle(window, argv[1]);
     SDL_SetWindowSize(window, window_w, window_h);
-#ifdef RPS_FULLSCREEN
-    SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
-#else
-    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED);
-#endif /* RSP_FULLSCREEN */
+    if (getenv("SDL_FULLSCREEN") != NULL)
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+    else
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED,
+            SDL_WINDOWPOS_CENTERED);
     SDL_ShowWindow(window);
 
 #ifdef RPS_INIT_TRI
