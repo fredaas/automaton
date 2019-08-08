@@ -19,7 +19,7 @@ eca
 
 bb
 
-    Brian's Brain [NOT IMPLEMENTED]
+    Brian's brain [NOT IMPLEMENTED]
 
 ss
 
