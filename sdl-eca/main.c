@@ -13,7 +13,7 @@
 
 typedef uint32_t pixel_t;
 
-#define BLACK 0x000000ff
+#define BLACK 0x404040ff
 #define WHITE 0xffffffff
 
 char *rowbuff1 = NULL;
