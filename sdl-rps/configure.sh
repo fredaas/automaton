@@ -7,9 +7,9 @@ USAGE
 
 OPTIONS
 
-    -c
+    -c <mode>
 
-        Select perturbation mode and neighbor selection:
+        Available modes: 1, 2, 3, and 4.
 
             1. '3', 'all'
 
