@@ -4,10 +4,10 @@
 #include <omp.h>
 #include <SDL.h>
 
-#define FPS 120
+#define FPS 30
 #define SLEEPTIME (1000 / FPS)
 
-#define SCALE 1 / 2
+#define SCALE 1 / 4
 #define WIDTH 800
 #define HEIGHT 600
 
@@ -16,15 +16,15 @@ typedef uint32_t pixel_t;
 #define BLACK 0x000000ff
 #define WHITE 0xffffffff
 
-char *cells_a = NULL;
-char *cells_b = NULL;
+char *rowbuff1 = NULL;
+char *rowbuff2 = NULL;
 
 pixel_t *pixels = NULL;
 
 char *ruleset = NULL;
 
-#define cell_a(x) cells_a[1 + x]
-#define cell_b(x) cells_b[1 + x]
+#define BUFF1(x) rowbuff1[1 + x]
+#define BUFF2(x) rowbuff2[1 + x]
 
 int window_w  = WIDTH,
     window_h  = HEIGHT;
@@ -37,7 +37,7 @@ SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *texture = NULL;
 
-#define pixel(x, y) pixels[(texture_w * (y)) + (x)]
+#define PIXEL(x, y) pixels[(texture_w * (y)) + (x)]
 
 #define ctoi(c) (int)((c) - '0')
 
@@ -48,10 +48,10 @@ void swap(char **a, char **b)
     *b = c;
 }
 
-char eval_stencil(char *s)
+char stencil(char *s)
 {
-    int i = ctoi(s[0]) * (int)pow(2, 2)
-        + ctoi(s[1]) * (int)pow(2, 1) + ctoi(s[2]);
+    int i =
+        ctoi(s[0]) * (int)pow(2, 2) + ctoi(s[1]) * (int)pow(2, 1) + ctoi(s[2]);
     return ruleset[7 - i];
 }
 
@@ -83,34 +83,39 @@ char * get_ruleset(int k)
 void init(SDL_Texture *texture)
 {
     int x = texture_w / 2;
-    cell_a(x) = '1';
-    pixel(x, 0) = BLACK;
+    BUFF1(x) = '1';
+    PIXEL(x, 0) = BLACK;
     SDL_UpdateTexture(texture, NULL, pixels, texture_w * sizeof(pixel_t));
 }
 
 void iterate(SDL_Texture *texture)
 {
-    static int y = 1;
+    static int y = 0;
 
-    if (y > texture_h - 1)
-        y = 0;
+    if (y == texture_h - 1)
+    {
+        for (int i = 1; i < texture_h; i++)
+            memcpy(&PIXEL(0, i - 1), &PIXEL(0, i), texture_w * sizeof(pixel_t));
+    }
+    else
+    {
+        y++;
+    }
 
     for (int x = 0; x < texture_w; x++)
     {
         char s[3];
-        s[0] = cell_a(x - 1);
-        s[1] = cell_a(x);
-        s[2] = cell_a(x + 1);
-        char r = eval_stencil(s);
-        cell_b(x) = r;
-        pixel(x, y) = (r == '1' ? BLACK : WHITE);
+        s[0] = BUFF1(x - 1);
+        s[1] = BUFF1(x);
+        s[2] = BUFF1(x + 1);
+        char r = stencil(s);
+        BUFF2(x) = r;
+        PIXEL(x, y) = (r == '1' ? BLACK : WHITE);
     }
 
-    y++;
+    swap(&rowbuff2, &rowbuff1);
 
-    swap(&cells_b, &cells_a);
-
-    memset(cells_b, '0', (texture_w + 2) * sizeof(char));
+    memset(rowbuff2, '0', (texture_w + 2) * sizeof(char));
 
     SDL_UpdateTexture(texture, NULL, pixels, texture_w * sizeof(pixel_t));
 }
@@ -119,7 +124,9 @@ int main(int argc, char **argv)
 {
     srand(time(NULL));
 
-    if (argc - 1 == 0)
+    argc--;
+
+    if (argc == 0)
         ruleset = get_ruleset(150);
     else
         ruleset = get_ruleset(atoi(argv[1]));
@@ -140,10 +147,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    cells_a = (char *)calloc((texture_w + 2), sizeof(char));
-    cells_b = (char *)calloc((texture_w + 2), sizeof(char));
-    memset(cells_a, '0', (texture_w + 2) * sizeof(char));
-    memset(cells_b, '0', (texture_w + 2) * sizeof(char));
+    rowbuff1 = (char *)calloc((texture_w + 2), sizeof(char));
+    rowbuff2 = (char *)calloc((texture_w + 2), sizeof(char));
+    memset(rowbuff1, '0', (texture_w + 2) * sizeof(char));
+    memset(rowbuff2, '0', (texture_w + 2) * sizeof(char));
 
     pixels = (pixel_t *)malloc(texture_w * texture_h * sizeof(pixel_t));
     memset(pixels, 0xffffffff, texture_w * texture_h * sizeof(pixel_t));
@@ -153,7 +160,7 @@ int main(int argc, char **argv)
         SDL_TEXTUREACCESS_STREAMING, texture_w, texture_h);
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 
-    /* Stretch texture to rect */
+    /* Configure texture target surface. Texture is mapped onto this surface */
     SDL_Rect texture_rect;
     texture_rect.w = window_w;
     texture_rect.h = window_h;
