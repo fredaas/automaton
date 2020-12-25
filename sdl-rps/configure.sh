@@ -64,4 +64,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 export CFLAGS
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS=4
